@@ -1,0 +1,2 @@
+#!/bin/bash
+rm -rf todo.db ;surreal start  file:todo.db --user root --pass root --log debug
