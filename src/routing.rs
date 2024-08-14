@@ -2,17 +2,23 @@ use std::sync::Arc;
 
 use axum::routing::{get, patch, post};
 use axum::{Extension, Json, Router};
-use serde_json::json;
-//use surrealdb::sql::json;
+use serde_json::{json, Value};
 use tracing::{debug, error, info};
 
 use crate::db::{DataBase, Todo};
+
+fn todos_to_json(todos: Vec<Todo>) -> Value {
+    json!(todos
+        .iter()
+        .map(|todo| todo.to_json())
+        .collect::<Vec<Value>>())
+}
 
 async fn list_todos(Extension(db): Extension<Arc<DataBase>>) -> Json<serde_json::Value> {
     info!("Fetching all todos");
     let mytodos: Vec<Todo> = db.get_all_todo().await.unwrap();
     debug!("All todos: {:?}", mytodos);
-    Json(json!(mytodos))
+    Json(todos_to_json(mytodos))
 }
 
 async fn add_todo(
@@ -20,9 +26,10 @@ async fn add_todo(
     todo_title: String,
 ) -> Json<serde_json::Value> {
     info!("Adding new todo: {}", todo_title);
-    let newtodo = db.new_todo(todo_title.clone()).await.unwrap();
+    let newtodo = db.new_todo(todo_title).await.unwrap()[0].clone();
     debug!("Added Todo {:?}", newtodo);
-    Json(json!(newtodo))
+
+    Json(newtodo.to_json())
 }
 
 async fn toggle_todo(
@@ -34,7 +41,7 @@ async fn toggle_todo(
     match newtodo {
         Ok(Some(updated_todo)) => {
             debug!("Toggled Todo {:?}", &updated_todo);
-            Json(json!(updated_todo))
+            Json(updated_todo.to_json())
         }
         Ok(None) => Json(json!("Todo not found with given id")),
 
@@ -54,7 +61,7 @@ async fn remove_todo(
     match newtodo {
         Ok(Some(updated_todo)) => {
             debug!("Removed Todo {:?}", &updated_todo);
-            Json(json!(updated_todo))
+            Json(updated_todo.to_json())
         }
         Ok(None) => Json(json!("Todo not found with given id")),
 
@@ -69,10 +76,10 @@ pub async fn clear_todos(Extension(db): Extension<Arc<DataBase>>) -> Json<serde_
     match db.clear_all_todos().await {
         Ok(todos) => {
             debug!("Deleted all todos");
-            Json(json!(todos))
+            Json(todos_to_json(todos))
         }
         Err(e) => {
-            error!("Something went wrong clearing todos {:?}",e);
+            error!("Something went wrong clearing todos {:?}", e);
             Json(json!("Error clearing all todos"))
         }
     }

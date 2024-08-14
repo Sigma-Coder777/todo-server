@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::opt::auth::Root;
 use surrealdb::sql::Thing;
 use surrealdb::{Error, Surreal};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Todo {
     pub id: Option<Thing>,
     pub title: String,
@@ -17,6 +18,15 @@ impl Todo {
             title,
             is_done: false,
         }
+    }
+    pub fn to_json(&self) -> serde_json::Value {
+        json!(
+            {
+                "id":self.id.as_ref().unwrap().id.to_string(),
+                "title":self.title,
+                "is_done":self.is_done
+            }
+        )
     }
 }
 pub struct DataBase {
